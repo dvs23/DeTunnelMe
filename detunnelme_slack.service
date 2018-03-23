@@ -1,0 +1,19 @@
+[Unit]
+Description=Slack Server
+Requires=network-online.target
+After=dhcpcd@ens3.service
+
+[Service]
+# The PID file is optional, but recommended in the manpage
+# "so that systemd can identify the main process of the daemon"
+User=root
+ExecStart=/usr/bin/nodejs /home/pi/DeTunnelMe/slack.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production PORT=8081
+WorkingDirectory=/home/pi/DeTunnelMe/
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=Localtunnel
+Requires=network-online.target
+After=dhcpcd@ens3.service
+
+[Service]
+# The PID file is optional, but recommended in the manpage
+# "so that systemd can identify the main process of the daemon"
+User=root
+ExecStart=/usr/local/bin/lt --port 8081 --subdomain yourcooldomainname
+Restart=always
+RestartSec=5
+WorkingDirectory=/home/pi/DeTunnelMe/
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+module.exports = {
+    tunnelUsers: {
+        "mrx": {
+            name: "Mr. X",
+            lockedSecsLeft: 0,
+            wakeLockSecsLeft: 0
+        },
+        "mrx2": {
+            name: "Mr. X2",
+            lockedSecsLeft: 0,
+            wakeLockSecsLeft: 0
+        },
+        ...
+    },
+
+    users: [{
+            id: 0,
+            username: "mrx",
+            password: "1234"
+        }, {
+            id: 1,
+            username: "mrx2",
+            password: "1234"
+        },
+        ...
+    ],
+
+    alias: {
+        "john.doe": "mrx",
+        "maria.doe": "mrx2",
+        ...
+    }
+};
