@@ -260,19 +260,19 @@ app.post('/wakeUpSlack',
                             respondSlack(response_url, "OK, " + user + " has been waked!");
                             res.send("OK, " + user + " has been waked!");
                         } else {
-                            respondSlack(response_url, "You are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
-                            res.send("You are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
+                            respondSlack(response_url, "You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
+                            res.send("You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
                         }
                     } else {
-                        respondSlack(response_url, "The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
-                        res.send("The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
+                        respondSlack(response_url, calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
+                        res.send(calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
                     }
                 } else {
                     if (userData.tunnelUsers[user].lockedSecsLeft === 0) {
                         console.log(req.body);
                         comEmit.emit("WAKE", user, user);
-                        respondSlack(response_url, "OK, " + user + " has been waked! But you are no registered user...");
-                        res.send("OK, " + user + " has been waked! But you are no registered user...");
+                        respondSlack(response_url, "OK, " + user + " has been waked! But you ("+calluser+") are no registered user...");
+                        res.send("OK, " + user + " has been waked! But you ("+calluser+") are no registered user...");
                     } else {
                         respondSlack(response_url, "The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
                         res.send("The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
@@ -309,15 +309,15 @@ app.post('/lockSlack',
                 if (userData.tunnelUsers[lockuser].lockedSecsLeft === 0) {
                     console.log(req.body);
                     comEmit.emit("LOCK", lockuser, req.body.time, lockuser);
-                    respondSlack(response_url, "OK, you have been locked for " + req.body.time + " min.!");
-                    res.send("OK, you have been locked for " + req.body.time + " min.!");
+                    respondSlack(response_url, "OK, you ("+lockuser+") have been locked for " + req.body.time + " min.!");
+                    res.send("OK, you ("+lockuser+") have been locked for " + req.body.time + " min.!");
                 } else {
-                    respondSlack(response_url, "You are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
-                    res.send("You are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
+                    respondSlack(response_url, "You ("+lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
+                    res.send("You ("+lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
                 }
             } else {
-                respondSlack(response_url, "Your username is not registered at the DeTunnelMe-server.");
-                res.send("Your username is not registered at the DeTunnelMe-server.");
+                respondSlack(response_url, "Your username ("+lockuser+") is not registered at the DeTunnelMe-server.");
+                res.send("Your username ("+lockuser+") is not registered at the DeTunnelMe-server.");
             }
 
         } else{
