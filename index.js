@@ -7,17 +7,14 @@ var request = require('request');
 
 var userData = require('./userData.js');
 
-//passport init stuff start
-var express = require('express');
-var passport = require('passport');
-var Strategy = require('passport-local').Strategy;
-
+//i2c for connecting to the arduino responsible for sending the 433 MHz signal
 var i2c = require('i2c');
 var address = 0x04;
 var wire = new i2c(address, {
     device: '/dev/i2c-1'
 });
 
+//if there is an internal alias for the given username, use it - otherwise return the given username
 function procAlias(username) {
     if (Object.keys(userData.alias).indexOf(username) > -1)
         return userData.alias[username];
@@ -25,6 +22,8 @@ function procAlias(username) {
     return username;
 }
 
+//decrement every *SecsLeft variable greater than zero
+//=> if we lock or wake someone, this variable is increased by the time to wait/lock in seconds
 setInterval(function() {
     for (var userid of Object.keys(userData.tunnelUsers)) {
         if (userData.tunnelUsers[userid].lockedSecsLeft > 0)
@@ -34,15 +33,21 @@ setInterval(function() {
     }
 }, 1000);
 
+//passport init stuff start
+var express = require('express');
+var passport = require('passport');
+var Strategy = require('passport-local').Strategy;
+
+//tell passport to use a local username->password dict saved in userData.js
 passport.use(new Strategy(
-    function(locusername, locpassword, callb) {
-        for (var i = 0; i < userData.users.length; i++) {
-            var user = userData.users[i];
-            if (user.username === locusername) {
-                return callb(null, user);
+    function(locusername, locpassword, callb) {//basically it's a function to find a user in our db - if existing
+        for (var i = 0; i < userData.users.length; i++) {//go through all users in our DB
+            var user = userData.users[i];//save current user
+            if (user.username === locusername) {//if it's the searched user
+                return callb(null, user);//return the user together with the password
             }
         }
-        return callb(null, null);
+        return callb(null, null);//otherwise, if locusername hasn't been found, return null
     }));
 
 passport.serializeUser(function(user, callb) {
@@ -59,8 +64,6 @@ passport.deserializeUser(function(id, callb) {
 // Create a new Express application.
 var app = express();
 
-// Use application-level middleware for common functionality, including
-// logging, parsing, and session handling.
 app.use(require('cookie-parser')());
 app.use(require('body-parser').urlencoded({
     extended: true
@@ -71,8 +74,7 @@ app.use(require('express-session')({
     saveUninitialized: false
 }));
 
-// Initialize Passport and restore authentication state, if any, from the
-// session.
+// Initialize Passport and restore authentication state, if any, from the session.
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -83,33 +85,35 @@ class CommandEmitter extends EventEmitter {}
 
 const comEmit = new CommandEmitter();
 
+//express app.post/app.get emit an event to handle the wake/lock
 comEmit.on("WAKE", (usr, wakeusr) => {
-    if (Object.keys(userData.tunnelUsers).indexOf(usr) > -1 &&
-        Object.keys(userData.tunnelUsers).indexOf(wakeusr) > -1 &&
-        userData.tunnelUsers[wakeusr].wakeLockSecsLeft === 0) {
-
-        userData.tunnelUsers[wakeusr].wakeLockSecsLeft = 10;
-        console.log('Sending wake to ' + usr);
-        for (var i = 0; i < usr.length; i++) {
+    if (Object.keys(userData.tunnelUsers).indexOf(usr) > -1 &&//if calling user
+        Object.keys(userData.tunnelUsers).indexOf(wakeusr) > -1 &&// and the user to wake are in our DB
+        userData.tunnelUsers[wakeusr].wakeLockSecsLeft === 0) {//and the calling user is not locked, so can wake someone
+        //run the wake command
+        userData.tunnelUsers[wakeusr].wakeLockSecsLeft = 10;//currently proceeding wake -> lock the calling user for the next 10 secs
+        console.log('Sending wake to ' + usr);//log that we are waking somebody
+        for (var i = 0; i < usr.length; i++) {//order our sending arduino to send the given username to wake it up
             wire.writeByte(usr.charCodeAt(i), function(err) {});
         }
-        if (usr.length > 0)
-            wire.writeByte('%'.charCodeAt(0), function(err) {});
+        if (usr.length > 0)//if we have sent something
+            wire.writeByte('%'.charCodeAt(0), function(err) {});//send our delimiter to tell the arduino that there's the end of the username
     }
 });
 
 comEmit.on("LOCK", (usr, time, lockusr) => {
-    if (usr === lockusr) {
-        console.log("LOCK: " + lockusr + " " + usr);
-        userData.tunnelUsers[usr].lockedSecsLeft = time * 60;
+    if (usr === lockusr) {//users can only lock themselves -> calling user and user to lock sould be equal
+        console.log("LOCK: " + lockusr + " " + usr);//log that we are locking someone
+        userData.tunnelUsers[usr].lockedSecsLeft = time * 60;//time is given to us in minutes, save it in seconds
     }
 });
 
 var btn =
     `<button type="button" class="btn {class}" id="{id}"{state}>
     {text}
-</button>`;
+</button>`;//template for a html/bootstrap button
 
+//create the custom webpage for a specific user (wake/lock buttons, logout etc.)
 function getBtns(username) {
     var formHTML = `<div>
                         <h2>Hallo, ` + username + `!</h2>`;
