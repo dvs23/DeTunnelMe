@@ -116,58 +116,58 @@ var btn =
 //create the custom webpage for a specific user (wake/lock buttons, logout etc.)
 function getBtns(username) {
     var formHTML = `<div>
-                        <h2>Hallo, ` + username + `!</h2>`;
+                        <h2>Hallo, ` + username + `!</h2>`;//greet the user
 
-    if (userData.tunnelUsers[username].lockedSecsLeft === 0) {
+    if (userData.tunnelUsers[username].lockedSecsLeft === 0) {//if the logged-in user is not already locked
         var lockMe = btn.replace("{class}", 'lock btn-secondary');
         lockMe = lockMe.replace("{state}", '');
         lockMe = lockMe.replace("{id}", username);
-        lockMe = lockMe.replace("{text}", "Mich 30 Min. sperren");
+        lockMe = lockMe.replace("{text}", "Mich 30 Min. sperren");//add "lock me"-Button 
         formHTML += lockMe;
-    } else
+    } else//if the user is still locked, show how long
         formHTML += "<span>Du bist noch " + (userData.tunnelUsers[username].lockedSecsLeft / 60.0).toFixed(2) + " Min. gesperrt!</span>";
 
     formHTML += `<button type="button" class="btn logout btn-danger" id="` + username + `">
                     Ausloggen
-                </button><br/>`;
+                </button><br/>`;//log out button
 
-    for (var userid of Object.keys(userData.tunnelUsers)) {
-        if (userid === username)
+    for (var userid of Object.keys(userData.tunnelUsers)) {//go through (other) users
+        if (userid === username)//do not make buttons for waking yourself
             continue;
 
-        if (userData.tunnelUsers[userid].lockedSecsLeft > 0) {
+        if (userData.tunnelUsers[userid].lockedSecsLeft > 0) {//if the user is locked
             var tbtn = btn.replace("{class}", 'wake btn-danger');
             tbtn = tbtn.replace("{state}", ' disabled=""');
             tbtn = tbtn.replace("{id}", userid);
             tbtn = tbtn.replace("{text}", userData.tunnelUsers[userid].name + " ist gesperrt, " + (userData.tunnelUsers[userid].lockedSecsLeft / 60.0).toFixed(2) + " Min. verbleiben");
-            formHTML += "<h3>" + userData.tunnelUsers[userid].name + "</h3>" + tbtn + "\n";
-        } else if (userData.tunnelUsers[username].wakeLockSecsLeft > 0) {
+            formHTML += "<h3>" + userData.tunnelUsers[userid].name + "</h3>" + tbtn + "\n";//make a disabled button with the locking time left
+        } else if (userData.tunnelUsers[username].wakeLockSecsLeft > 0) {//if the logged-in user is locked to wake anybody
             var tbtn = btn.replace("{class}", 'wake btn-danger');
             tbtn = tbtn.replace("{state}", ' disabled=""');
             tbtn = tbtn.replace("{id}", userid);
             tbtn = tbtn.replace("{text}", "Du kannst noch " + userData.tunnelUsers[username].wakeLockSecsLeft + " Sek. niemanden aufwecken");
-            formHTML += "<h3>" + userData.tunnelUsers[userid].name + "</h3>" + tbtn + "\n";
-        } else {
+            formHTML += "<h3>" + userData.tunnelUsers[userid].name + "</h3>" + tbtn + "\n";//disable buttons and show how long that user cannot wake anyone
+        } else {//if the user is not locked and the logged-in user can wake someone
             var tbtn = btn.replace("{class}", 'wake btn-danger');
             tbtn = tbtn.replace("{state}", '');
-            tbtn = tbtn.replace("{id}", userid);
+            tbtn = tbtn.replace("{id}", userid);//add wake button
             tbtn = tbtn.replace("{text}", userData.tunnelUsers[userid].name + " aufwecken");
             formHTML += "<h3>" + userData.tunnelUsers[userid].name + "</h3>" + tbtn + "\n";
         }
     };
-    formHTML += "</div>";
+    formHTML += "</div>";//end container
     return formHTML;
 }
 
-function respondSlack(url, text){
-    request.post(
-        url, {
-            json: {
-                text: text,
-                attachments: [{}]
+function respondSlack(url, text){//send response over url from slack request -> avoid sending directly because of timeout
+    request.post(//it's just a post request
+        url, {//to the given URL
+            json: {//containing a json with
+                text: text,//the given answer to print in chat
+                attachments: [{}]//propably unnecessary
             }
         },
-        function(error, response, body) {
+        function(error, response, body) {//logging and error handling
             if (!error && response.statusCode == 200) {
                 console.log("Success!");
                 console.log(body);
@@ -180,45 +180,47 @@ function respondSlack(url, text){
     );
 }
 
-app.get('/',
+//express request handlers
+
+app.get('/',//main page
     function(req, res) {
-        if (req.user) {
-            fs.readFile(__dirname + "/index.html", function(err, data, ending) {
-                var formHTML = getBtns(req.user.username);
+        if (req.user) {//if the request comes from a logged in user
+            fs.readFile(__dirname + "/index.html", function(err, data, ending) {//load the template file
+                var formHTML = getBtns(req.user.username);//generate custom content for the webpage
 
-                var tresp = data.toString();
-                if (data.indexOf("{{content}}") > -1)
-                    tresp = tresp.replace("{{content}}", formHTML);
+                var tresp = data.toString();//make string from read file data
+                if (data.indexOf("{{content}}") > -1)//id there is {{content}} somewhere (that's where we put the custom content)
+                    tresp = tresp.replace("{{content}}", formHTML);//and replace it with the generated stuff
 
-                res.send(tresp);
+                res.send(tresp);//send response
             });
-        } else {
+        } else {//otherwise redirect to login 
             res.redirect('/login');
         }
     });
 
-app.get('/getContent',
+app.get('/getContent',//JSON get from main page -> self-refreshing without completely reloading the site
     function(req, res) {
-        if (req.user) {
-            res.send(getBtns(req.user.username));
-        } else {
-            res.end();
+        if (req.user) {//if the requester is logged in
+            res.send(getBtns(req.user.username));//send him what he wants
+        } else {//otherwise -> not logged in
+            res.end();//send nothing
         }
     });
 
-app.get('/login',
-    function(req, res) {
+app.get('/login',//login page
+    function(req, res) {//just send the login template from disk
         fs.readFile(__dirname + "/views/login.html", function(err, data, ending) {
             res.send(data.toString());
         });
     });
 
-app.post('/login',
+app.post('/login',//make passport handle login 
     passport.authenticate('local', {
         failureRedirect: '/login'
     }),
     function(req, res) {
-        res.redirect('/');
+        res.redirect('/');//after successful login, redirect to main page
     });
 
 app.post('/wakeUp',
@@ -328,13 +330,6 @@ app.post('/lockSlack',
             console.log("Error! Malformed lock request...");
             res.send("Error!");
         }
-    });
-
-
-app.get('/logout',
-    function(req, res) {
-        req.logout();
-        res.redirect('/');
     });
 
 var httpServer = http.createServer(app);
