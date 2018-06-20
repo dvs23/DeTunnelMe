@@ -274,8 +274,8 @@ app.post('/wakeUpSlack',//no authentification needed here -> posted by other Nod
                         if (userData.tunnelUsers[calluser].wakeLockSecsLeft === 0) {//and the calling user is not wake-locked
                             console.log(req.body);
                             comEmit.emit("WAKE", user, calluser);//wake/proceed request
-                            respondSlack(response_url, "OK, " + user + " has been waked!");
-                            res.send("OK, " + user + " has been waked!");
+                            respondSlack(response_url, "OK, " + user + " has been woken!");
+                            res.send("OK, " + user + " has been woken!");
                         } else {//if user is wake-locked
                             respondSlack(response_url, "You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
                             res.send("You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
@@ -288,8 +288,8 @@ app.post('/wakeUpSlack',//no authentification needed here -> posted by other Nod
                     if (userData.tunnelUsers[user].lockedSecsLeft === 0) {//if to-wake user is not locked
                         console.log(req.body);
                         comEmit.emit("WAKE", user, user);//wake nevertheless, but respond with warning in slack
-                        respondSlack(response_url, "OK, " + user + " has been waked! But you ("+calluser+") are no registered user...");
-                        res.send("OK, " + user + " has been waked! But you ("+calluser+") are no registered user...");
+                        respondSlack(response_url, "OK, " + user + " has been woken! But you ("+calluser+") are no registered user...");
+                        res.send("OK, " + user + " has been woken! But you ("+calluser+") are no registered user...");
                     } else {//if to-wake user is locked
                         respondSlack(response_url, "The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
                         res.send("The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
