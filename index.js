@@ -223,6 +223,12 @@ app.post('/login',//make passport handle login
         res.redirect('/');//after successful login, redirect to main page
     });
 
+app.get('/logout',
+    function(req, res) {
+        req.logout();
+        res.redirect('/');
+    });
+
 app.post('/wakeUp',//personal pages of each user can send a POST request to this path to wake someone up
     function(req, res) {
         if (req.user) {//check if a user is logged in (only those users have the permission to wake someone)
