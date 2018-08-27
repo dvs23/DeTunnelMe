@@ -86,7 +86,9 @@ class CommandEmitter extends EventEmitter {}
 const comEmit = new CommandEmitter();
 
 //express app.post/app.get emit an event to handle the wake/lock
-comEmit.on("WAKE", (usr, wakeusr) => {
+comEmit.on("WAKE", (usrp, wakeusrp) => {
+    var usr = procAlias(usrp);
+    var wakeusr = procAlias(wakeusrp);
     if (Object.keys(userData.tunnelUsers).indexOf(usr) > -1 &&//if calling user
         Object.keys(userData.tunnelUsers).indexOf(wakeusr) > -1 &&// and the user to wake are in our DB
         userData.tunnelUsers[wakeusr].wakeLockSecsLeft === 0) {//and the calling user is not locked, so can wake someone
@@ -104,7 +106,7 @@ comEmit.on("WAKE", (usr, wakeusr) => {
 comEmit.on("LOCK", (usr, time, lockusr) => {
     if (usr === lockusr) {//users can only lock themselves -> calling user and user to lock sould be equal
         console.log("LOCK: " + lockusr + " " + usr);//log that we are locking someone
-        userData.tunnelUsers[usr].lockedSecsLeft = time * 60;//time is given to us in minutes, save it in seconds
+        userData.tunnelUsers[pricAlias(usr)].lockedSecsLeft = time * 60;//time is given to us in minutes, save it in seconds
     }
 });
 
@@ -274,22 +276,22 @@ app.post('/wakeUpSlack',//no authentification needed here -> posted by other Nod
                         if (userData.tunnelUsers[calluser].wakeLockSecsLeft === 0) {//and the calling user is not wake-locked
                             console.log(req.body);
                             comEmit.emit("WAKE", user, calluser);//wake/proceed request
-                            respondSlack(response_url, "OK, " + user + " has been woken!");
-                            res.send("OK, " + user + " has been woken!");
+                            respondSlack(response_url, "OK, " + req.body.user + " has been woken!");
+                            res.send("OK, " + req.body.user + " has been woken!");
                         } else {//if user is wake-locked
-                            respondSlack(response_url, "You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
-                            res.send("You ("+calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
+                            respondSlack(response_url, "You ("+req.body.calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
+                            res.send("You ("+req.body.calluser+") are locked! " + userData.tunnelUsers[calluser].wakeLockSecsLeft + " sec. left.");
                         }
                     } else {//if to-wake user is locked
-                        respondSlack(response_url, calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
-                        res.send(calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
+                        respondSlack(response_url, req.body.calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
+                        res.send(req.body.calluser+" is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.");
                     }
                 } else {//if username of calling user has not been found
                     if (userData.tunnelUsers[user].lockedSecsLeft === 0) {//if to-wake user is not locked
                         console.log(req.body);
                         comEmit.emit("WAKE", user, user);//wake nevertheless, but respond with warning in slack
-                        respondSlack(response_url, "OK, " + user + " has been woken! But you ("+calluser+") are no registered user...");
-                        res.send("OK, " + user + " has been woken! But you ("+calluser+") are no registered user...");
+                        respondSlack(response_url, "OK, " + req.body.user + " has been woken! But you ("+req.body.calluser+") are no registered user...");
+                        res.send("OK, " + req.body.user + " has been woken! But you ("+req.body.calluser+") are no registered user...");
                     } else {//if to-wake user is locked
                         respondSlack(response_url, "The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
                         res.send("The user you want to wake is locked! " + (userData.tunnelUsers[calluser].lockedSecsLeft / 60.0).toFixed(2) + " min. left.  But you are no registered user...");
@@ -299,9 +301,9 @@ app.post('/wakeUpSlack',//no authentification needed here -> posted by other Nod
                 var respon = "Wrong username! Possible usernames:\n";//there's nothing we can do -> respond with list of valid usernames
                 for (var userid of Object.keys(userData.tunnelUsers)) {
                     if (userData.tunnelUsers[userid].lockedSecsLeft > 0)
-                        respon += userid + ", still locked for " + (userData.tunnelUsers[userid].lockedSecsLeft / 60.0).toFixed(2) + " min.\n";
+                        respon += userid + " (" + userData.tunnelUsers[userid].name + "), still locked for " + (userData.tunnelUsers[userid].lockedSecsLeft / 60.0).toFixed(2) + " min.\n";
                     else
-                        respon += userid + "\n";
+                        respon += userid + " (" + userData.tunnelUsers[userid].name + ")\n";
                 }
                 respondSlack(response_url, respon);
                 res.send(respon);
@@ -326,15 +328,15 @@ app.post('/lockSlack',
                 if (userData.tunnelUsers[lockuser].lockedSecsLeft === 0) {//and user is not already locked
                     console.log(req.body);
                     comEmit.emit("LOCK", lockuser, req.body.time, lockuser);//lock user
-                    respondSlack(response_url, "OK, you ("+lockuser+") have been locked for " + req.body.time + " min.!");
-                    res.send("OK, you ("+lockuser+") have been locked for " + req.body.time + " min.!");
+                    respondSlack(response_url, "OK, you ("+req.body.lockuser+") have been locked for " + req.body.time + " min.!");
+                    res.send("OK, you ("+req.body.lockuser+") have been locked for " + req.body.time + " min.!");
                 } else {//if user is already locked
-                    respondSlack(response_url, "You ("+lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
-                    res.send("You ("+lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
+                    respondSlack(response_url, "You ("+req.body.lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
+                    res.send("You ("+req.body.lockuser+") are still locked! " + userData.tunnelUsers[lockuser].lockedSecsLeft + " Sec. left.");
                 }
             } else {//if username to lock has not been found
-                respondSlack(response_url, "Your username ("+lockuser+") is not registered at the DeTunnelMe-server.");
-                res.send("Your username ("+lockuser+") is not registered at the DeTunnelMe-server.");
+                respondSlack(response_url, "Your username ("+req.body.lockuser+") is not registered at the DeTunnelMe-server.");
+                res.send("Your username ("+req.body.lockuser+") is not registered at the DeTunnelMe-server.");
             }
 
         } else {//if not all needed fields are defined
