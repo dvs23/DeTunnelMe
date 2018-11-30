@@ -55,7 +55,20 @@ passport.serializeUser(function(user, callb) {
 });
 
 passport.deserializeUser(function(id, callb) {
-    callb(null, userData.users[id]);
+    console.log("id"+id);
+    var ind = -1;
+    for( var i = 0; i<userData.users.length; i++){
+        if(userData.users[i].id === id){
+            ind = i;
+            break;
+        }
+    }
+    if(ind==-1){
+        callb(null, false);
+    }
+    else {
+        callb(null, userData.users[ind]);
+    }
 });
 
 //passport init stuff end
@@ -116,7 +129,8 @@ var btn =
 </button>`;//template for a html/bootstrap button
 
 //create the custom webpage for a specific user (wake/lock buttons, logout etc.)
-function getBtns(username) {
+function getBtns(username_unproceeded) {
+    var username = procAlias(username_unproceeded);
     var formHTML = `<div>
                         <h2>Hallo, ` + username + `!</h2>`;//greet the user
 
